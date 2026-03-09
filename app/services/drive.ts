@@ -3,8 +3,7 @@ import { getValidToken, refreshAccessToken } from "./auth";
 const DRIVE_API = "https://www.googleapis.com/upload/drive/v3/files";
 const DRIVE_FILES_API = "https://www.googleapis.com/drive/v3/files";
 
-// TODO: replace with actual pending folder ID
-const PENDING_FOLDER_ID = "YOUR_PENDING_FOLDER_ID";
+const PENDING_FOLDER_ID = process.env.EXPO_PUBLIC_PENDING_FOLDER_ID as string;
 
 /**
  * Upload a file to Google Drive pending/ folder
@@ -33,22 +32,20 @@ export async function uploadToDrive(
   );
   formData.append("file", fileBlob);
 
-  let response = await fetch(`${DRIVE_API}?uploadType=multipart`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
-  });
+  const doUpload = (authToken: string) =>
+    fetch(`${DRIVE_API}?uploadType=multipart`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${authToken}` },
+      body: formData,
+    });
+
+  let response = await doUpload(token);
 
   // If 401, try refreshing token and retry once
   if (response.status === 401) {
-    token = await refreshAccessToken();
-    if (!token) throw new Error("Token refresh failed");
-
-    response = await fetch(`${DRIVE_API}?uploadType=multipart`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
+    const newToken = await refreshAccessToken();
+    if (!newToken) throw new Error("Token refresh failed");
+    response = await doUpload(newToken);
   }
 
   if (!response.ok) {

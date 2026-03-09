@@ -39,7 +39,7 @@ async function listPendingFiles(): Promise<DriveFile[]> {
  * Download a file from Drive to local directory
  */
 async function downloadFile(file: DriveFile): Promise<string> {
-  const destPath = path.join(config.downloadDir, file.name);
+  const destPath = path.join(config.downloadDir, path.basename(file.name));
 
   const res = await drive.files.get(
     { fileId: file.id, alt: "media" },

@@ -13,6 +13,8 @@ import { enqueue, processQueue } from "../services/queue";
 
 type Status = "idle" | "recording" | "uploading" | "done" | "error";
 
+const RESET_STATUS_DELAY_MS = 2000;
+
 export default function RecordButton() {
   const [status, setStatus] = useState<Status>("idle");
   const [duration, setDuration] = useState(0);
@@ -83,7 +85,7 @@ export default function RecordButton() {
       setStatus("uploading");
 
       const now = new Date();
-      const fileName = `voice-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}.m4a`;
+      const fileName = `voice-${now.toISOString().replace(/[:.]/g, "-")}.m4a`;
 
       try {
         await uploadToDrive(uri, fileName);
@@ -99,11 +101,11 @@ export default function RecordButton() {
       await processQueue();
 
       // Reset after 2 seconds
-      setTimeout(() => setStatus("idle"), 2000);
+      setTimeout(() => setStatus("idle"), RESET_STATUS_DELAY_MS);
     } catch (err) {
       console.error("Failed to stop recording:", err);
       setStatus("error");
-      setTimeout(() => setStatus("idle"), 2000);
+      setTimeout(() => setStatus("idle"), RESET_STATUS_DELAY_MS);
     }
   };
 
