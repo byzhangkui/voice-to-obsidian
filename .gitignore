@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+
+# Expo
+app/.expo/
+app/node_modules/
+
+# Downloaded audio temp files
+service/downloads/
