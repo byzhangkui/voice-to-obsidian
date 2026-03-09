@@ -43,7 +43,8 @@ export async function processQueue(): Promise<{
     try {
       await uploadToDrive(item.fileUri, item.fileName);
       succeeded++;
-    } catch {
+    } catch (error) {
+      console.error(`Failed to process queued item ${item.fileName}:`, error);
       remaining.push(item);
     }
   }

@@ -90,9 +90,19 @@ cd app
 npm install
 ```
 
-运行前需替换配置：
-- `services/auth.ts` 第 4 行：`GOOGLE_CLIENT_ID` 改为你的 Client ID
-- `services/drive.ts` 第 7 行：`PENDING_FOLDER_ID` 改为你的文件夹 ID
+在 `app/` 目录下创建 `.env` 文件来配置环境变量：
+
+```bash
+cd app
+cp .env.example .env  # 如果有 .env.example 的话，或者直接创建 .env
+```
+
+在 `.env` 文件中设置以下值：
+
+```ini
+EXPO_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
+EXPO_PUBLIC_PENDING_FOLDER_ID=your_pending_folder_id
+```
 
 ```bash
 # 启动开发服务

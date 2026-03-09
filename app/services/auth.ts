@@ -1,7 +1,7 @@
 import * as AuthSession from "expo-auth-session";
 import * as SecureStore from "expo-secure-store";
 
-const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"; // TODO: replace with actual client ID
+const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID as string;
 const TOKEN_KEY = "google_access_token";
 const REFRESH_TOKEN_KEY = "google_refresh_token";
 
