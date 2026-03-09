@@ -2,6 +2,7 @@
   "expo": {
     "name": "Voice to Obsidian",
     "slug": "voice-to-obsidian",
+    "scheme": "voice-to-obsidian",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
