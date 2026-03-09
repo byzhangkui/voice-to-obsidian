@@ -126,6 +126,26 @@ npm start
 npm run dev
 ```
 
+### Android 手机测试配置指南
+
+#### 方式一：使用 Expo Go 快速预览（推荐日常开发使用）
+这是最简单的方式，不需要数据线，也不用每次都打包。
+1. **下载应用**：在你的 Android 手机上，打开 Google Play 商店，搜索并安装 **“Expo Go”**。
+2. **网络要求**：确保你的 Android 手机和运行代码的电脑连接在 **同一个 Wi-Fi 网络** 下。
+3. **启动并连接**：
+   - 运行 `npx expo start`。
+   - 打开手机上的 Expo Go 应用，点击 **“Scan QR Code”**，扫描电脑终端输出的二维码即可加载运行。
+
+#### 方式二：安装并测试独立打包的 APK 文件
+1. **允许安装未知来源**：在手机的 **设置 (Settings)** -> 搜索 **“安装未知应用” (Install unknown apps)**，找到你用来下载或传输 APK 的应用（比如 Chrome 浏览器，或者文件管理器），允许它安装未知应用。
+2. **安装 APK**：将 `.apk` 文件传输到手机上并点击安装。
+
+#### ⚠️ 关于 Google 登录的额外配置
+无论是哪种测试方式，为了确保 Google OAuth 登录正常：
+1. `app/.env` 中必须填入正确的 `EXPO_PUBLIC_GOOGLE_CLIENT_ID`。
+2. **对于 Expo Go 测试**：Google Cloud Console 中创建的 OAuth 客户端 ID（类型必须是 **Web application**）的“已授权的重定向 URI”必须包含 `https://auth.expo.io/@你的expo用户名/voice-to-obsidian`。
+3. **对于独立 APK 测试**：项目的 `app.json` 已经配置了 `"scheme": "voice-to-obsidian"`。你必须在 Google Cloud Console 的 Web Client ID 的“已授权的重定向 URI”中，添加一条：`voice-to-obsidian://`，以确保登录后能正确回调并跳转回应用。
+
 ## 使用方式
 
 1. 打开 App → 点击 **Google 登录**
