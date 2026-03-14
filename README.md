@@ -47,9 +47,9 @@ voice-to-obsidian/
 2. 创建项目（或选择已有项目）
 3. 启用 **Google Drive API**
 4. 创建 OAuth 2.0 凭据：
-   - 应用类型选 **Web application**
-   - 添加授权重定向 URI（Expo 的 redirect URI，运行 `npx uri-scheme list` 可查看）
-5. 记下 `Client ID` 和 `Client Secret`
+   - 创建一个 **iOS** client，Bundle ID 填入我们的包名 `com.voicetoobsidian.app`。
+   - *(注：为了绕过 Google 对 Expo AuthSession 的网页重定向限制，即使是打包 Android 独立应用，我们也必须使用 **iOS** 类型的 Client ID)*
+5. 记下生成的 `Client ID`
 
 ### 2. Google Drive 文件夹
 
@@ -100,7 +100,7 @@ cp .env.example .env  # 如果有 .env.example 的话，或者直接创建 .env
 在 `.env` 文件中设置以下值：
 
 ```ini
-EXPO_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
+EXPO_PUBLIC_GOOGLE_CLIENT_ID=your_ios_client_id
 EXPO_PUBLIC_PENDING_FOLDER_ID=your_pending_folder_id
 ```
 
@@ -141,10 +141,10 @@ npm run dev
 2. **安装 APK**：将 `.apk` 文件传输到手机上并点击安装。
 
 #### ⚠️ 关于 Google 登录的额外配置
-无论是哪种测试方式，为了确保 Google OAuth 登录正常：
 1. `app/.env` 中必须填入正确的 `EXPO_PUBLIC_GOOGLE_CLIENT_ID`。
-2. **对于 Expo Go 测试**：Google Cloud Console 中创建的 OAuth 客户端 ID（类型必须是 **Web application**）的“已授权的重定向 URI”必须包含 `https://auth.expo.io/@你的expo用户名/voice-to-obsidian`。
-3. **对于独立 APK 测试**：项目的 `app.json` 已经配置了 `"scheme": "voice-to-obsidian"`。你必须在 Google Cloud Console 的 Web Client ID 的“已授权的重定向 URI”中，添加一条：`voice-to-obsidian://`，以确保登录后能正确回调并跳转回应用。
+2. **重定向限制绕过**：由于 Google 对 Web 类型的客户端限制了必须使用 `http/https` 作为重定向 URI，如果你在 Android 独立应用（APK）中使用自定义 scheme（如 `com.voicetoobsidian.app://`），会导致 `400 invalid_request` 错误。
+3. **最终解决方案**：为了在独立应用中正常拉起网页版授权并跳回应用，我们在 Google Cloud Console 中必须创建一个 **iOS** 类型的客户端（将 Bundle ID 设置为 `com.voicetoobsidian.app`）。然后在代码中，我们将请求的 redirect URI 固定为 `com.voicetoobsidian.app:/oauth2redirect`。这能完美绕过 Google 的限制。
+4. 每次修改 `.env` 或 `app.json` 后，都需要重新执行 `npx expo prebuild --platform android --no-install` 并重新编译原生构建。
 
 ## 使用方式
 
