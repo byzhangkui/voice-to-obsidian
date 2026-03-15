@@ -16,7 +16,7 @@ export async function processAudioFile(filePath: string, operation: string): Pro
   console.log(`Starting processing for: ${absolutePath}`);
 
   try {
-    const prompt = `这是一段语音记录，忽略背景音和非人声。请直接输出音频的原文转录。不要输出任何多余的解释说明或寒暄。`;
+    const prompt = `这是一段语音记录，忽略背景音和非人声。针对这段音频内容，请${operation}。请直接输出最终结果，不要输出任何多余的解释说明或寒暄。`;
     const resultText = await executeGeminiAudioTask(absolutePath, prompt);
 
     // Save to Obsidian Vault directly
@@ -29,9 +29,11 @@ export async function processAudioFile(filePath: string, operation: string): Pro
     const dateStr = now.toISOString().split("T")[0];
     const timeStr = now.toTimeString().split(":")[0] + ":" + now.toTimeString().split(":")[1];
     
+    const tag = operation.includes("灵感") || operation.includes("执行这个操作") ? "idea" : "voice-note";
+    
     const markdownContent = `---
 date: ${dateStr} ${timeStr}
-tags: [voice-note]
+tags: [${tag}]
 ---
 
 ${resultText}
