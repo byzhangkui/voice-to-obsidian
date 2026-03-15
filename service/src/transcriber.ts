@@ -16,7 +16,7 @@ export async function processAudioWithGemini(filePath: string): Promise<void> {
     // 构造调用 gemini CLI 的命令
     // -p: 非交互模式
     // --yolo: 自动同意执行工具（绕过确认弹窗）
-    const command = `gemini -p "请使用 voice-to-obsidian 技能处理这个音频文件：${absolutePath}。" --yolo`;
+    const command = `gemini --model gemini-3.1-pro-preview -p "使用 voice-to-obsidian skill 处理：${absolutePath}。" --yolo`;
 
     const { stdout, stderr } = await execPromise(command, {
       env: { ...process.env }, // 继承当前环境
