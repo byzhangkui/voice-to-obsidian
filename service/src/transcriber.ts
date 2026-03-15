@@ -20,7 +20,7 @@ export async function processAudioWithGemini(filePath: string): Promise<void> {
     // 构造调用 gemini CLI 的命令
     // -p: 非交互模式
     // --yolo: 自动同意执行工具（绕过确认弹窗）
-    const command = `gemini --model gemini-3.1-pro-preview -p "听听：@${absolutePath}，忽略背景音，忽略非人声。将结果生成 Markdown 文件并存入: ${vaultPath}" --yolo`;
+    const command = `gemini --model gemini-3.1-pro-preview -p "using native multimodal capabilities to listen：@${absolutePath}，忽略背景音，忽略非人声。将结果生成 Markdown 文件并存入下面路径: ${vaultPath}" --yolo`;
 
     const { stdout, stderr } = await execPromise(command, {
       env: { ...process.env }, // 继承当前环境
