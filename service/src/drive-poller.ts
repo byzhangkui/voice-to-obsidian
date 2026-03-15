@@ -2,7 +2,7 @@ import { google, drive_v3 } from "googleapis";
 import fs from "fs";
 import path from "path";
 import { getConfig } from "./config";
-import { processAudioWithGemini } from "./transcriber";
+import { processAudioFile } from "./processor";
 
 export interface DriveFile {
   id: string;
@@ -107,9 +107,9 @@ export async function pollOnce(): Promise<void> {
       // 1. Download
       localPath = await downloadFile(file);
 
-      // 2. Process completely using Gemini CLI
+      // 2. Process completely
       const operation = file.sourceType === "idea" ? "执行这个操作，将结果写入 obsidian 目录。" : "转录成普通笔记，提取关键要点，并写入 Obsidian";
-      await processAudioWithGemini(localPath, operation);
+      await processAudioFile(localPath, operation);
 
       // 3. Move original in Drive
       await moveToProcessed(file);
