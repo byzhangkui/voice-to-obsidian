@@ -22,6 +22,9 @@ export function getConfig() {
       ideaPendingFolderId: requireEnv("DRIVE_IDEA_PENDING_FOLDER_ID"),
       processedFolderId: requireEnv("DRIVE_PROCESSED_FOLDER_ID"),
     },
+    gemini: {
+      apiKey: requireEnv("GEMINI_API_KEY"),
+    },
     obsidian: {
       vaultPath: requireEnv("OBSIDIAN_VAULT_PATH"),
     },

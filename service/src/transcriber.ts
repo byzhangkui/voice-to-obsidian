@@ -1,12 +1,10 @@
-import { exec } from "child_process";
-import util from "util";
+import fs from "fs";
 import path from "path";
 import { getConfig } from "./config";
-
-const execPromise = util.promisify(exec);
+import { GoogleGenAI } from "@google/genai";
 
 /**
- * Transcribes, summarizes, and writes an audio file to Obsidian using Gemini CLI and the 'voice-to-obsidian' skill.
+ * Transcribes, summarizes, and writes an audio file to Obsidian using the Gemini API.
  * @param filePath The local path to the audio file.
  * @param operation The specific operation to perform based on the origin folder.
  */
@@ -14,31 +12,86 @@ export async function processAudioWithGemini(filePath: string, operation: string
   const absolutePath = path.resolve(filePath);
   const config = getConfig();
   const vaultPath = config.obsidian.vaultPath;
+  const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey });
   
-  console.log(`Starting processing via Gemini CLI for: ${absolutePath}`);
+  console.log(`Starting processing via Gemini API for: ${absolutePath}`);
 
   try {
-    // 构造调用 gemini CLI 的命令
-    // -p: 非交互模式
-    // --yolo: 自动同意执行工具（绕过确认弹窗）
-    const command = `gemini --model gemini-3.1-pro-preview -p "using native multimodal capabilities to listen：@${absolutePath}，忽略背景音，忽略非人声。将结果生成 Markdown 文件并存入下面路径: ${vaultPath}。针对这段音频内容，请${operation}" --yolo`;
+    // 1. Upload audio to Gemini
+    console.log("Uploading file to Gemini...");
+    const uploadResult = await ai.files.upload({
+      file: absolutePath,
+      config: {
+        mimeType: "audio/mp4", // m4a is supported as audio/mp4
+      },
+    });
+    
+    if (!uploadResult.name) {
+      throw new Error("Upload failed: missing file name in response");
+    }
+    
+    console.log(`File uploaded successfully: ${uploadResult.name}`);
 
-    const { stdout, stderr } = await execPromise(command, {
-      env: { ...process.env }, // 继承当前环境
-      maxBuffer: 10 * 1024 * 1024 // 增加缓冲避免大输出崩溃
+    // 2. Process with Gemini
+    const prompt = `这是一段语音记录，忽略背景音和非人声。针对这段音频内容，请${operation}。
+请将最终结果直接输出为 Markdown 格式。如果是普通笔记，请提取关键要点（Points）和摘要总结（Summary），以及原始转录。如果是灵感，直接输出正文。无论何种情况，都不要输出除了 Markdown 正文以外的任何多余解释说明或寒暄。`;
+
+    console.log("Generating content with Gemini...");
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        uploadResult,
+        prompt
+      ],
     });
 
-    if (stderr) {
-      console.warn(`[Gemini CLI Stderr]: ${stderr}`);
+    const resultText = response.text || "";
+    console.log("Gemini processing completed.");
+
+    // 3. Clean up the file from Gemini
+    await ai.files.delete({ name: uploadResult.name });
+    console.log(`Cleaned up remote file: ${uploadResult.name}`);
+
+    // 4. Save to Obsidian Vault
+    const attachmentsDir = path.join(vaultPath, "Attachments");
+    const notesDir = path.join(vaultPath, "00_Inbox");
+
+    if (!fs.existsSync(attachmentsDir)) {
+      fs.mkdirSync(attachmentsDir, { recursive: true });
+    }
+    if (!fs.existsSync(notesDir)) {
+      fs.mkdirSync(notesDir, { recursive: true });
     }
 
-    console.log(`Gemini CLI Processing completed.`);
-    console.log(`[Gemini CLI Output]:\n${stdout}`);
+    const now = new Date();
+    const timestamp = now.toISOString().replace(/[-:T]/g, "").slice(0, 14);
+    const dateStr = now.toISOString().split("T")[0];
+    const timeStr = now.toTimeString().split(":")[0] + ":" + now.toTimeString().split(":")[1];
+
+    const audioFileName = path.basename(absolutePath);
+    const destAudioPath = path.join(attachmentsDir, audioFileName);
+
+    fs.copyFileSync(absolutePath, destAudioPath);
+    console.log(`Copied audio to: ${destAudioPath}`);
+    
+    const markdownContent = `---
+date: ${dateStr} ${timeStr}
+tags: [voice-note]
+audio: "[[Attachments/${audioFileName}]]"
+---
+
+${resultText}
+`;
+
+    const topic = operation.includes("灵感") ? "Idea" : "Note";
+    const noteFileName = `${timestamp}-${topic}.md`;
+    const notePath = path.join(notesDir, noteFileName);
+
+    fs.writeFileSync(notePath, markdownContent, "utf-8");
+    console.log(`Created Obsidian note: ${notePath}`);
 
   } catch (error: any) {
-    console.error(`Processing failed for ${filePath}:`, error.message);
-    throw new Error(`Failed to process audio via Gemini CLI: ${error.message}`);
+    console.error(`Processing failed for ${filePath}:`, error);
+    throw new Error(`Failed to process audio via Gemini API: ${error.message}`);
   }
 }
-
-
