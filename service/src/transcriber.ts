@@ -4,17 +4,17 @@ import { getConfig } from "./config";
 import { GoogleGenAI } from "@google/genai";
 
 /**
- * Transcribes, summarizes, and writes an audio file to Obsidian using the Gemini API.
- * @param filePath The local path to the audio file.
- * @param operation The specific operation to perform based on the origin folder.
+ * Uploads an audio file to Gemini, applies a prompt, and returns the generated text.
+ * Cleans up the uploaded file automatically.
+ * 
+ * @param absolutePath The absolute local path to the audio file.
+ * @param prompt The prompt to apply to the audio content.
+ * @returns The resulting text from the model.
  */
-export async function processAudioWithGemini(filePath: string, operation: string): Promise<void> {
-  const absolutePath = path.resolve(filePath);
+export async function executeGeminiAudioTask(absolutePath: string, prompt: string): Promise<string> {
   const config = getConfig();
-  const vaultPath = config.obsidian.vaultPath;
   const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey });
-  
-  console.log(`Starting processing via Gemini API for: ${absolutePath}`);
+  let uploadName = "";
 
   try {
     // 1. Upload audio to Gemini
@@ -29,12 +29,11 @@ export async function processAudioWithGemini(filePath: string, operation: string
     if (!uploadResult.name) {
       throw new Error("Upload failed: missing file name in response");
     }
+    uploadName = uploadResult.name;
     
-    console.log(`File uploaded successfully: ${uploadResult.name}`);
+    console.log(`File uploaded successfully: ${uploadName}`);
 
     // 2. Process with Gemini
-    const prompt = `这是一段语音记录，忽略背景音和非人声。请直接输出音频的原文转录。不要输出任何多余的解释说明或寒暄。`;
-
     console.log("Generating content with Gemini...");
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -46,12 +45,41 @@ export async function processAudioWithGemini(filePath: string, operation: string
 
     const resultText = response.text || "";
     console.log("Gemini processing completed.");
+    
+    return resultText;
 
+  } catch (error: any) {
+    throw new Error(`Failed to execute Gemini task: ${error.message}`);
+  } finally {
     // 3. Clean up the file from Gemini
-    await ai.files.delete({ name: uploadResult.name });
-    console.log(`Cleaned up remote file: ${uploadResult.name}`);
+    if (uploadName) {
+      try {
+        await ai.files.delete({ name: uploadName });
+        console.log(`Cleaned up remote file: ${uploadName}`);
+      } catch (cleanupError) {
+        console.error(`Failed to clean up remote file ${uploadName}:`, cleanupError);
+      }
+    }
+  }
+}
 
-    // 4. Save to Obsidian Vault directly
+/**
+ * Transcribes, summarizes, and writes an audio file to Obsidian.
+ * @param filePath The local path to the audio file.
+ * @param operation The specific operation to perform based on the origin folder.
+ */
+export async function processAudioWithGemini(filePath: string, operation: string): Promise<void> {
+  const absolutePath = path.resolve(filePath);
+  const config = getConfig();
+  const vaultPath = config.obsidian.vaultPath;
+  
+  console.log(`Starting processing for: ${absolutePath}`);
+
+  try {
+    const prompt = `这是一段语音记录，忽略背景音和非人声。请直接输出音频的原文转录。不要输出任何多余的解释说明或寒暄。`;
+    const resultText = await executeGeminiAudioTask(absolutePath, prompt);
+
+    // Save to Obsidian Vault directly
     if (!fs.existsSync(vaultPath)) {
       fs.mkdirSync(vaultPath, { recursive: true });
     }
