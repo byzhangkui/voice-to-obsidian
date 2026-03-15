@@ -56,21 +56,36 @@ export async function ensureAuthenticated(clientId: string, clientSecret: string
               
               // 自动写入到 .env 文件中
               try {
-                let envContent = fs.readFileSync(envPath, 'utf8');
-                if (envContent.includes('GOOGLE_REFRESH_TOKEN=')) {
-                  envContent = envContent.replace(/GOOGLE_REFRESH_TOKEN=.*/, `GOOGLE_REFRESH_TOKEN=${tokens.refresh_token}`);
-                } else {
-                  envContent += `\nGOOGLE_REFRESH_TOKEN=${tokens.refresh_token}\n`;
+                let envContent = '';
+                try {
+                  envContent = fs.readFileSync(envPath, 'utf8');
+                } catch (readErr: any) {
+                  if (readErr.code !== 'ENOENT') {
+                    // For other read errors, we can warn the user and proceed.
+                    console.warn(`⚠️  Could not read .env file, will attempt to create/overwrite it. Error: ${readErr.message}`);
+                  }
+                  // If file doesn't exist (ENOENT), envContent remains empty, and we'll create the file.
                 }
+
+                if (envContent.match(/^GOOGLE_REFRESH_TOKEN=.*$/m)) {
+                  envContent = envContent.replace(/^GOOGLE_REFRESH_TOKEN=.*$/m, `GOOGLE_REFRESH_TOKEN=${tokens.refresh_token}`);
+                } else {
+                  // Ensure there's a newline before appending if the file is not empty and doesn't end with one.
+                  if (envContent && !envContent.endsWith('\n')) {
+                    envContent += '\n';
+                  }
+                  envContent += `GOOGLE_REFRESH_TOKEN=${tokens.refresh_token}\n`;
+                }
+
                 fs.writeFileSync(envPath, envContent);
                 console.log('✅ 已自动将其保存到 .env 文件中！\n');
-                
-                // 设置当前环境变量，以便当前进程继续执行
+
                 process.env.GOOGLE_REFRESH_TOKEN = tokens.refresh_token;
                 resolve(tokens.refresh_token);
-              } catch (writeErr) {
+              } catch (writeErr: any) {
                 console.warn('⚠️ 获取成功，但写入 .env 文件失败。请手动添加:');
                 console.log(`GOOGLE_REFRESH_TOKEN=${tokens.refresh_token}`);
+                // The token is already in the current process, so we can still proceed.
                 process.env.GOOGLE_REFRESH_TOKEN = tokens.refresh_token;
                 resolve(tokens.refresh_token);
               }
