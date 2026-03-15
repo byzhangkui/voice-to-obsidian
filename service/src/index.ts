@@ -1,6 +1,8 @@
 import fs from "fs";
-import { config } from "./config";
+import { getConfig } from "./config";
 import { pollOnce } from "./drive-poller";
+
+const config = getConfig();
 
 // Ensure download directory exists
 if (!fs.existsSync(config.downloadDir)) {

@@ -1,21 +1,27 @@
 import { exec } from "child_process";
 import util from "util";
-import { config } from "./config";
+import path from "path";
+import { getConfig } from "./config";
 
 const execPromise = util.promisify(exec);
 
 /**
  * Transcribes, summarizes, and writes an audio file to Obsidian using Gemini CLI and the 'voice-to-obsidian' skill.
  * @param filePath The local path to the audio file.
+ * @param operation The specific operation to perform (e.g. for note or idea).
  */
-export async function processAudioWithGemini(filePath: string): Promise<void> {
-  console.log(`Starting processing via Gemini CLI for: ${filePath}`);
+export async function processAudioWithGemini(filePath: string, operation: string): Promise<void> {
+  const absolutePath = path.resolve(filePath);
+  console.log(`Starting processing via Gemini CLI for: ${absolutePath}`);
   
   try {
+    const config = getConfig();
+    const vaultPath = config.obsidian.vaultPath;
+    
     // 构造调用 gemini CLI 的命令
     // -p: 非交互模式
     // --yolo: 自动同意执行工具（绕过确认弹窗）
-    const command = `gemini -p "请使用 voice-to-obsidian 技能处理这个音频文件：${filePath}" --yolo`;
+    const command = `gemini --model gemini-3.1-pro-preview -p "using native multimodal capabilities to listen：@${absolutePath}，忽略背景音，忽略非人声。将结果生成 Markdown 文件并存入下面路径: ${vaultPath}。针对这段音频内容，请${operation}" --yolo`;
     
     const { stdout, stderr } = await execPromise(command, {
         env: { ...process.env }, // 继承当前环境
@@ -34,5 +40,3 @@ export async function processAudioWithGemini(filePath: string): Promise<void> {
     throw new Error(`Failed to process audio via Gemini CLI: ${error.message}`);
   }
 }
-
-
