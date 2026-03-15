@@ -1,24 +1,28 @@
 import dotenv from "dotenv";
 import path from "path";
 
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+export const envPath = path.resolve(__dirname, "../../.env");
+dotenv.config({ path: envPath });
 
-function requireEnv(name: string): string {
+export function requireEnv(name: string, optional = false): string {
   const value = process.env[name];
-  if (!value) {
+  if (!value && !optional) {
     throw new Error(`Missing required environment variable: ${name}`);
   }
-  return value;
+  return value || "";
 }
 
-export const config = {
-  google: {
-    clientId: requireEnv("GOOGLE_CLIENT_ID"),
-    clientSecret: requireEnv("GOOGLE_CLIENT_SECRET"),
-    refreshToken: requireEnv("GOOGLE_REFRESH_TOKEN"),
-    pendingFolderId: requireEnv("DRIVE_PENDING_FOLDER_ID"),
-    processedFolderId: requireEnv("DRIVE_PROCESSED_FOLDER_ID"),
-  },
-  downloadDir: process.env.DOWNLOAD_DIR || path.resolve(__dirname, "../downloads"),
-  pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || "30000", 10),
-};
+export function getConfig() {
+  return {
+    google: {
+      clientId: requireEnv("GOOGLE_CLIENT_ID"),
+      clientSecret: requireEnv("GOOGLE_CLIENT_SECRET"),
+      refreshToken: requireEnv("GOOGLE_REFRESH_TOKEN", true), // Make optional for initial load
+      pendingFolderId: requireEnv("DRIVE_PENDING_FOLDER_ID"),
+      processedFolderId: requireEnv("DRIVE_PROCESSED_FOLDER_ID"),
+    },
+    downloadDir: process.env.DOWNLOAD_DIR || path.resolve(__dirname, "../downloads"),
+    pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || "30000", 10),
+  };
+}
+

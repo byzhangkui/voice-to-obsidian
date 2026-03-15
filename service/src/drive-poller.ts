@@ -1,29 +1,34 @@
 import { google, drive_v3 } from "googleapis";
 import fs from "fs";
 import path from "path";
-import { config } from "./config";
+import { getConfig } from "./config";
 import { processAudioWithGemini } from "./transcriber";
-
-const oauth2Client = new google.auth.OAuth2(
-  config.google.clientId,
-  config.google.clientSecret
-);
-
-oauth2Client.setCredentials({
-  refresh_token: config.google.refreshToken,
-});
-
-const drive = google.drive({ version: "v3", auth: oauth2Client });
 
 export interface DriveFile {
   id: string;
   name: string;
 }
 
+function getDriveClient() {
+  const config = getConfig();
+  const oauth2Client = new google.auth.OAuth2(
+    config.google.clientId,
+    config.google.clientSecret
+  );
+
+  oauth2Client.setCredentials({
+    refresh_token: config.google.refreshToken,
+  });
+
+  return google.drive({ version: "v3", auth: oauth2Client });
+}
+
 /**
  * List files in the pending folder
  */
 async function listPendingFiles(): Promise<DriveFile[]> {
+  const config = getConfig();
+  const drive = getDriveClient();
   const res = await drive.files.list({
     q: `'${config.google.pendingFolderId}' in parents and trashed = false`,
     fields: "files(id, name)",
@@ -40,6 +45,8 @@ async function listPendingFiles(): Promise<DriveFile[]> {
  * Download a file from Drive to local directory
  */
 async function downloadFile(file: DriveFile): Promise<string> {
+  const config = getConfig();
+  const drive = getDriveClient();
   const destPath = path.join(config.downloadDir, path.basename(file.name));
 
   const res = await drive.files.get(
@@ -63,6 +70,8 @@ async function downloadFile(file: DriveFile): Promise<string> {
  * Move a file from pending to processed folder in Drive
  */
 async function moveToProcessed(file: DriveFile): Promise<void> {
+  const config = getConfig();
+  const drive = getDriveClient();
   await drive.files.update({
     fileId: file.id,
     addParents: config.google.processedFolderId,
