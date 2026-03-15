@@ -1,5 +1,6 @@
 import { exec } from "child_process";
 import util from "util";
+import path from "path";
 
 const execPromise = util.promisify(exec);
 
@@ -8,13 +9,14 @@ const execPromise = util.promisify(exec);
  * @param filePath The local path to the audio file.
  */
 export async function processAudioWithGemini(filePath: string): Promise<void> {
-  console.log(`Starting processing via Gemini CLI for: ${filePath}`);
+  const absolutePath = path.resolve(filePath);
+  console.log(`Starting processing via Gemini CLI for: ${absolutePath}`);
 
   try {
     // 构造调用 gemini CLI 的命令
     // -p: 非交互模式
     // --yolo: 自动同意执行工具（绕过确认弹窗）
-    const command = `gemini -p "请使用 voice-to-obsidian 技能处理这个音频文件：${filePath}。" --yolo`;
+    const command = `gemini -p "请使用 voice-to-obsidian 技能处理这个音频文件：${absolutePath}。" --yolo`;
 
     const { stdout, stderr } = await execPromise(command, {
       env: { ...process.env }, // 继承当前环境
