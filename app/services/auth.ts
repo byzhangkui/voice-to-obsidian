@@ -1,7 +1,7 @@
 import * as AuthSession from "expo-auth-session";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
-const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID as string;
 const TOKEN_KEY = "google_access_token";
 const REFRESH_TOKEN_KEY = "google_refresh_token";
 
@@ -11,18 +11,54 @@ const discovery = {
   revocationEndpoint: "https://oauth2.googleapis.com/revoke",
 };
 
-const redirectUri = AuthSession.makeRedirectUri();
+function getGoogleClientId(): string {
+  const clientId =
+    Platform.OS === "ios"
+      ? process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
+      : process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+
+  if (!clientId) {
+    throw new Error(
+      `Missing Google OAuth client ID for platform: ${Platform.OS}`
+    );
+  }
+
+  return clientId;
+}
+
+function getGoogleRedirectUri(clientId: string): string {
+  const suffix = ".apps.googleusercontent.com";
+  if (!clientId.endsWith(suffix)) {
+    throw new Error(`Invalid Google OAuth client ID: ${clientId}`);
+  }
+
+  const scheme = `com.googleusercontent.apps.${clientId.slice(
+    0,
+    -suffix.length
+  )}`;
+
+  return AuthSession.makeRedirectUri({
+    native: `${scheme}:/oauthredirect`,
+  });
+}
 
 /**
  * Start Google OAuth2 login flow
  */
 export async function signIn(): Promise<string | null> {
+  const clientId = getGoogleClientId();
+  const redirectUri = getGoogleRedirectUri(clientId);
+
   const request = new AuthSession.AuthRequest({
-    clientId: GOOGLE_CLIENT_ID,
+    clientId,
     redirectUri,
     scopes: ["https://www.googleapis.com/auth/drive.file"],
     responseType: AuthSession.ResponseType.Code,
     usePKCE: true,
+    extraParams: {
+      access_type: "offline",
+      prompt: "consent",
+    },
   });
 
   const result = await request.promptAsync(discovery);
@@ -34,7 +70,7 @@ export async function signIn(): Promise<string | null> {
   // Exchange code for tokens
   const tokenResult = await AuthSession.exchangeCodeAsync(
     {
-      clientId: GOOGLE_CLIENT_ID,
+      clientId,
       code: result.params.code,
       redirectUri,
       extraParams: {
@@ -69,9 +105,10 @@ export async function refreshAccessToken(): Promise<string | null> {
   if (!refreshToken) return null;
 
   try {
+    const clientId = getGoogleClientId();
     const tokenResult = await AuthSession.refreshAsync(
       {
-        clientId: GOOGLE_CLIENT_ID,
+        clientId,
         refreshToken,
       },
       discovery
