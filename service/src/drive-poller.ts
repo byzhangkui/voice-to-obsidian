@@ -7,6 +7,8 @@ import { processAudioWithGemini } from "./transcriber";
 export interface DriveFile {
   id: string;
   name: string;
+  sourceType: "note" | "idea";
+  folderId: string;
 }
 
 function getDriveClient() {
@@ -24,13 +26,12 @@ function getDriveClient() {
 }
 
 /**
- * List files in the pending folder
+ * List files in a specific pending folder
  */
-async function listPendingFiles(): Promise<DriveFile[]> {
-  const config = getConfig();
+async function listPendingFiles(folderId: string, sourceType: "note" | "idea"): Promise<DriveFile[]> {
   const drive = getDriveClient();
   const res = await drive.files.list({
-    q: `'${config.google.pendingFolderId}' in parents and trashed = false`,
+    q: `'${folderId}' in parents and trashed = false`,
     fields: "files(id, name)",
     orderBy: "createdTime",
   });
@@ -38,6 +39,8 @@ async function listPendingFiles(): Promise<DriveFile[]> {
   return (res.data.files || []).map((f) => ({
     id: f.id!,
     name: f.name!,
+    sourceType,
+    folderId,
   }));
 }
 
@@ -75,7 +78,7 @@ async function moveToProcessed(file: DriveFile): Promise<void> {
   await drive.files.update({
     fileId: file.id,
     addParents: config.google.processedFolderId,
-    removeParents: config.google.pendingFolderId,
+    removeParents: file.folderId,
     fields: "id, parents",
   });
 
@@ -86,22 +89,27 @@ async function moveToProcessed(file: DriveFile): Promise<void> {
  * Poll once: list pending files, download, process with Gemini skill, and move to processed
  */
 export async function pollOnce(): Promise<void> {
-  const files = await listPendingFiles();
+  const config = getConfig();
+  const noteFiles = await listPendingFiles(config.google.pendingFolderId, "note");
+  const ideaFiles = await listPendingFiles(config.google.ideaPendingFolderId, "idea");
+  
+  const allFiles = [...noteFiles, ...ideaFiles];
 
-  if (files.length === 0) {
+  if (allFiles.length === 0) {
     return;
   }
 
-  console.log(`Found ${files.length} file(s) in pending/`);
+  console.log(`Found ${allFiles.length} file(s) pending processing...`);
 
-  for (const file of files) {
+  for (const file of allFiles) {
     let localPath = "";
     try {
       // 1. Download
       localPath = await downloadFile(file);
 
-      // 2. Process completely using Gemini CLI (transcription + summary + vault writing)
-      await processAudioWithGemini(localPath);
+      // 2. Process completely using Gemini CLI
+      const operation = file.sourceType === "idea" ? "执行这个操作，将结果写入 obsidian 目录。" : "转录成普通笔记，提取关键要点，并写入 Obsidian";
+      await processAudioWithGemini(localPath, operation);
 
       // 3. Move original in Drive
       await moveToProcessed(file);
@@ -110,12 +118,9 @@ export async function pollOnce(): Promise<void> {
       fs.unlinkSync(localPath);
       console.log(`Cleaned up local file: ${localPath}`);
       
-      console.log(`Successfully finished processing: ${file.name}`);
+      console.log(`Successfully finished processing: ${file.name} (Type: ${file.sourceType})`);
     } catch (err) {
       console.error(`Error processing ${file.name}:`, err);
-      // Optional: move to a "failed" folder or just leave it in pending
-      // For now, it stays in pending, will retry on next poll.
     }
   }
 }
-

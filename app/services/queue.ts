@@ -6,15 +6,16 @@ const QUEUE_KEY = "upload_queue";
 interface QueueItem {
   fileUri: string;
   fileName: string;
+  folderId: string;
   addedAt: number;
 }
 
 /**
  * Add a file to the upload queue
  */
-export async function enqueue(fileUri: string, fileName: string): Promise<void> {
+export async function enqueue(fileUri: string, fileName: string, folderId: string): Promise<void> {
   const queue = await getQueue();
-  queue.push({ fileUri, fileName, addedAt: Date.now() });
+  queue.push({ fileUri, fileName, folderId, addedAt: Date.now() });
   await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
 }
 
@@ -41,7 +42,12 @@ export async function processQueue(): Promise<{
 
   for (const item of queue) {
     try {
-      await uploadToDrive(item.fileUri, item.fileName);
+      // For old items without folderId, we use a fallback if possible, but they will likely fail or we can inject env here.
+      // Better to gracefully handle old items:
+      const targetFolder = item.folderId || process.env.EXPO_PUBLIC_PENDING_FOLDER_ID;
+      if (!targetFolder) throw new Error("No folderId available for queued item");
+      
+      await uploadToDrive(item.fileUri, item.fileName, targetFolder);
       succeeded++;
     } catch (error) {
       console.error(`Failed to process queued item ${item.fileName}:`, error);

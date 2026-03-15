@@ -19,6 +19,7 @@ export function getConfig() {
       clientSecret: requireEnv("GOOGLE_CLIENT_SECRET"),
       refreshToken: requireEnv("GOOGLE_REFRESH_TOKEN", true), // Make optional for initial load
       pendingFolderId: requireEnv("DRIVE_PENDING_FOLDER_ID"),
+      ideaPendingFolderId: requireEnv("DRIVE_IDEA_PENDING_FOLDER_ID"),
       processedFolderId: requireEnv("DRIVE_PROCESSED_FOLDER_ID"),
     },
     obsidian: {

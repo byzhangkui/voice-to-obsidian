@@ -8,8 +8,9 @@ const execPromise = util.promisify(exec);
 /**
  * Transcribes, summarizes, and writes an audio file to Obsidian using Gemini CLI and the 'voice-to-obsidian' skill.
  * @param filePath The local path to the audio file.
+ * @param operation The specific operation to perform based on the origin folder.
  */
-export async function processAudioWithGemini(filePath: string): Promise<void> {
+export async function processAudioWithGemini(filePath: string, operation: string): Promise<void> {
   const absolutePath = path.resolve(filePath);
   const config = getConfig();
   const vaultPath = config.obsidian.vaultPath;
@@ -20,7 +21,7 @@ export async function processAudioWithGemini(filePath: string): Promise<void> {
     // 构造调用 gemini CLI 的命令
     // -p: 非交互模式
     // --yolo: 自动同意执行工具（绕过确认弹窗）
-    const command = `gemini --model gemini-3.1-pro-preview -p "using native multimodal capabilities to listen：@${absolutePath}，忽略背景音，忽略非人声。将结果生成 Markdown 文件并存入下面路径: ${vaultPath}" --yolo`;
+    const command = `gemini --model gemini-3.1-pro-preview -p "using native multimodal capabilities to listen：@${absolutePath}，忽略背景音，忽略非人声。将结果生成 Markdown 文件并存入下面路径: ${vaultPath}。针对这段音频内容，请${operation}" --yolo`;
 
     const { stdout, stderr } = await execPromise(command, {
       env: { ...process.env }, // 继承当前环境
