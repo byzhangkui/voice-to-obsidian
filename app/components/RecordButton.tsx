@@ -18,9 +18,15 @@ const RESET_STATUS_DELAY_MS = 2000;
 export default function RecordButton() {
   const [status, setStatus] = useState<Status>("idle");
   const [duration, setDuration] = useState(0);
+  const [statusDetail, setStatusDetail] = useState("准备录音");
   const recordingRef = useRef<Audio.Recording | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scale = useRef(new Animated.Value(1)).current;
+
+  const formatError = (error: unknown) => {
+    if (error instanceof Error) return error.message;
+    return typeof error === "string" ? error : JSON.stringify(error);
+  };
 
   const startRecording = async () => {
     try {
@@ -42,6 +48,7 @@ export default function RecordButton() {
       recordingRef.current = recording;
       setStatus("recording");
       setDuration(0);
+      setStatusDetail("正在录音，松开后开始上传");
 
       // Start timer
       timerRef.current = setInterval(() => {
@@ -56,6 +63,7 @@ export default function RecordButton() {
     } catch (err) {
       console.error("Failed to start recording:", err);
       setStatus("error");
+      setStatusDetail(`开始录音失败：${formatError(err)}`);
     }
   };
 
@@ -79,32 +87,42 @@ export default function RecordButton() {
 
       if (!uri) {
         setStatus("error");
+        setStatusDetail("录音文件为空，未拿到本地 URI");
         return;
       }
 
-      setStatus("uploading");
-
       const now = new Date();
       const fileName = `voice-${now.toISOString().replace(/[:.]/g, "-")}.m4a`;
+      setStatus("uploading");
+      setStatusDetail(`录音完成，准备上传 ${fileName}`);
 
       try {
         await uploadToDrive(uri, fileName);
         setStatus("done");
-      } catch {
+        setStatusDetail(`上传成功：${fileName}`);
+      } catch (uploadError) {
         // Upload failed, add to offline queue
         await enqueue(uri, fileName);
         setStatus("done");
-        Alert.alert("已加入队列", "网络恢复后将自动上传");
+        const message = formatError(uploadError);
+        setStatusDetail(`上传失败，已加入队列：${message}`);
+        Alert.alert("上传失败，已加入队列", message);
       }
 
       // Try processing any queued items
-      await processQueue();
+      const queueResult = await processQueue();
+      if (queueResult.succeeded > 0 || queueResult.failed > 0) {
+        setStatusDetail((current) =>
+          `${current}\n队列处理结果：成功 ${queueResult.succeeded}，失败 ${queueResult.failed}`
+        );
+      }
 
       // Reset after 2 seconds
       setTimeout(() => setStatus("idle"), RESET_STATUS_DELAY_MS);
     } catch (err) {
       console.error("Failed to stop recording:", err);
       setStatus("error");
+      setStatusDetail(`结束录音失败：${formatError(err)}`);
       setTimeout(() => setStatus("idle"), RESET_STATUS_DELAY_MS);
     }
   };
@@ -160,6 +178,10 @@ export default function RecordButton() {
         </Pressable>
       </Animated.View>
       <Text style={styles.statusText}>{getStatusText()}</Text>
+      <View style={styles.detailCard}>
+        <Text style={styles.detailTitle}>上传状态</Text>
+        <Text style={styles.detailText}>{statusDetail}</Text>
+      </View>
     </View>
   );
 }
@@ -189,5 +211,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#666",
     fontWeight: "500",
+  },
+  detailCard: {
+    marginTop: 20,
+    width: 280,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  detailTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1F2937",
+    marginBottom: 8,
+  },
+  detailText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#4B5563",
   },
 });

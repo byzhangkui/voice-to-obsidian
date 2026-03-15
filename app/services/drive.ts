@@ -12,6 +12,10 @@ export async function uploadToDrive(
   fileUri: string,
   fileName: string
 ): Promise<boolean> {
+  if (!PENDING_FOLDER_ID) {
+    throw new Error("Missing EXPO_PUBLIC_PENDING_FOLDER_ID");
+  }
+
   let token = await getValidToken();
   if (!token) throw new Error("Not authenticated");
 
