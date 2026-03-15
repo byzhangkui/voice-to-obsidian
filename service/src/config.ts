@@ -21,6 +21,9 @@ export function getConfig() {
       pendingFolderId: requireEnv("DRIVE_PENDING_FOLDER_ID"),
       processedFolderId: requireEnv("DRIVE_PROCESSED_FOLDER_ID"),
     },
+    obsidian: {
+      vaultPath: requireEnv("OBSIDIAN_VAULT_PATH"),
+    },
     downloadDir: process.env.DOWNLOAD_DIR || path.resolve(__dirname, "../downloads"),
     pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || "30000", 10),
   };
