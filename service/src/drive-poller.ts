@@ -2,6 +2,7 @@ import { google, drive_v3 } from "googleapis";
 import fs from "fs";
 import path from "path";
 import { config } from "./config";
+import { processAudioWithGemini } from "./transcriber";
 
 const oauth2Client = new google.auth.OAuth2(
   config.google.clientId,
@@ -69,11 +70,11 @@ async function moveToProcessed(file: DriveFile): Promise<void> {
     fields: "id, parents",
   });
 
-  console.log(`Moved to processed: ${file.name}`);
+  console.log(`Moved to processed in Drive: ${file.name}`);
 }
 
 /**
- * Poll once: list pending files, download each, move to processed
+ * Poll once: list pending files, download, process with Gemini skill, and move to processed
  */
 export async function pollOnce(): Promise<void> {
   const files = await listPendingFiles();
@@ -85,11 +86,27 @@ export async function pollOnce(): Promise<void> {
   console.log(`Found ${files.length} file(s) in pending/`);
 
   for (const file of files) {
+    let localPath = "";
     try {
-      await downloadFile(file);
+      // 1. Download
+      localPath = await downloadFile(file);
+
+      // 2. Process completely using Gemini CLI (transcription + summary + vault writing)
+      await processAudioWithGemini(localPath);
+
+      // 3. Move original in Drive
       await moveToProcessed(file);
+
+      // 4. Cleanup local file
+      fs.unlinkSync(localPath);
+      console.log(`Cleaned up local file: ${localPath}`);
+      
+      console.log(`Successfully finished processing: ${file.name}`);
     } catch (err) {
       console.error(`Error processing ${file.name}:`, err);
+      // Optional: move to a "failed" folder or just leave it in pending
+      // For now, it stays in pending, will retry on next poll.
     }
   }
 }
+
