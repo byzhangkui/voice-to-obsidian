@@ -108,8 +108,7 @@ export async function pollOnce(): Promise<void> {
       localPath = await downloadFile(file);
 
       // 2. Process completely
-      const operation = file.sourceType === "idea" ? "执行这个操作，将结果写入 obsidian 目录。" : "转录成普通笔记，提取关键要点，并写入 Obsidian";
-      await processAudioFile(localPath, operation);
+      await processAudioFile(localPath, file.sourceType);
 
       // 3. Move original in Drive
       await moveToProcessed(file);

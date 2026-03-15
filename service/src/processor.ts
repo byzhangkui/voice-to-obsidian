@@ -3,20 +3,28 @@ import path from "path";
 import { getConfig } from "./config";
 import { executeGeminiAudioTask } from "./utils/gemini-audio";
 
+export type AudioType = "note" | "idea";
+
 /**
  * Transcribes, summarizes, and writes an audio file to Obsidian.
  * @param filePath The local path to the audio file.
- * @param operation The specific operation to perform based on the origin folder.
+ * @param type The type of audio processing ("note" or "idea").
  */
-export async function processAudioFile(filePath: string, operation: string): Promise<void> {
+export async function processAudioFile(filePath: string, type: AudioType): Promise<void> {
   const absolutePath = path.resolve(filePath);
   const config = getConfig();
   const vaultPath = config.obsidian.vaultPath;
   
-  console.log(`Starting processing for: ${absolutePath}`);
+  console.log(`Starting processing for: ${absolutePath} (Type: ${type})`);
 
   try {
-    const prompt = `这是一段语音记录，忽略背景音和非人声。针对这段音频内容，请${operation}。请直接输出最终结果，不要输出任何多余的解释说明或寒暄。`;
+    let prompt = "";
+    if (type === "idea") {
+      prompt = `这是一段语音记录，忽略背景音和非人声。直接提取并输出语音中的核心灵感、想法或待办事项。请直接输出结果正文，不要输出任何多余的解释说明或寒暄。`;
+    } else {
+      prompt = `这是一段语音记录，忽略背景音和非人声。转录成普通笔记，提取关键要点，并输出原文。请直接输出最终的 Markdown 格式结果，不要输出任何多余的解释说明或寒暄。`;
+    }
+
     const resultText = await executeGeminiAudioTask(absolutePath, prompt);
 
     // Save to Obsidian Vault directly
@@ -29,7 +37,7 @@ export async function processAudioFile(filePath: string, operation: string): Pro
     const dateStr = now.toISOString().split("T")[0];
     const timeStr = now.toTimeString().split(":")[0] + ":" + now.toTimeString().split(":")[1];
     
-    const tag = operation.includes("灵感") || operation.includes("执行这个操作") ? "idea" : "voice-note";
+    const tag = type === "idea" ? "idea" : "voice-note";
     
     const markdownContent = `---
 date: ${dateStr} ${timeStr}
@@ -39,7 +47,8 @@ tags: [${tag}]
 ${resultText}
 `;
 
-    const noteFileName = `${timestamp}.md`;
+    const topic = type === "idea" ? "Idea" : "Note";
+    const noteFileName = `${timestamp}-${topic}.md`;
     const notePath = path.join(vaultPath, noteFileName);
 
     fs.writeFileSync(notePath, markdownContent, "utf-8");
