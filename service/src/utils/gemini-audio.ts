@@ -23,8 +23,8 @@ export async function executeGeminiAudioTask(absolutePath: string, prompt: strin
       },
     });
     
-    if (!uploadResult.name) {
-      throw new Error("Upload failed: missing file name in response");
+    if (!uploadResult.name || !uploadResult.uri) {
+      throw new Error("Upload failed: missing file name or uri in response");
     }
     uploadName = uploadResult.name;
     
@@ -34,7 +34,12 @@ export async function executeGeminiAudioTask(absolutePath: string, prompt: strin
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: [
-        uploadResult,
+        {
+          fileData: {
+            fileUri: uploadResult.uri,
+            mimeType: uploadResult.mimeType || "audio/mp4",
+          }
+        },
         prompt
       ],
     });
@@ -45,7 +50,7 @@ export async function executeGeminiAudioTask(absolutePath: string, prompt: strin
     return resultText;
 
   } catch (error: any) {
-    throw new Error(`Failed to execute Gemini task: ${error.message}`);
+    throw new Error(`Failed to execute Gemini task: ${JSON.stringify(error)} - ${error.message}`);
   } finally {
     if (uploadName) {
       try {
