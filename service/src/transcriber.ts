@@ -33,8 +33,7 @@ export async function processAudioWithGemini(filePath: string, operation: string
     console.log(`File uploaded successfully: ${uploadResult.name}`);
 
     // 2. Process with Gemini
-    const prompt = `这是一段语音记录，忽略背景音和非人声。针对这段音频内容，请${operation}。
-请将最终结果直接输出为 Markdown 格式。如果是普通笔记，请提取关键要点（Points）和摘要总结（Summary），以及原始转录。如果是灵感，直接输出正文。无论何种情况，都不要输出除了 Markdown 正文以外的任何多余解释说明或寒暄。`;
+    const prompt = `这是一段语音记录，忽略背景音和非人声。请直接输出音频的原文转录。不要输出任何多余的解释说明或寒暄。`;
 
     console.log("Generating content with Gemini...");
     const response = await ai.models.generateContent({
@@ -52,40 +51,26 @@ export async function processAudioWithGemini(filePath: string, operation: string
     await ai.files.delete({ name: uploadResult.name });
     console.log(`Cleaned up remote file: ${uploadResult.name}`);
 
-    // 4. Save to Obsidian Vault
-    const attachmentsDir = path.join(vaultPath, "Attachments");
-    const notesDir = path.join(vaultPath, "00_Inbox");
-
-    if (!fs.existsSync(attachmentsDir)) {
-      fs.mkdirSync(attachmentsDir, { recursive: true });
-    }
-    if (!fs.existsSync(notesDir)) {
-      fs.mkdirSync(notesDir, { recursive: true });
+    // 4. Save to Obsidian Vault directly
+    if (!fs.existsSync(vaultPath)) {
+      fs.mkdirSync(vaultPath, { recursive: true });
     }
 
     const now = new Date();
     const timestamp = now.toISOString().replace(/[-:T]/g, "").slice(0, 14);
     const dateStr = now.toISOString().split("T")[0];
     const timeStr = now.toTimeString().split(":")[0] + ":" + now.toTimeString().split(":")[1];
-
-    const audioFileName = path.basename(absolutePath);
-    const destAudioPath = path.join(attachmentsDir, audioFileName);
-
-    fs.copyFileSync(absolutePath, destAudioPath);
-    console.log(`Copied audio to: ${destAudioPath}`);
     
     const markdownContent = `---
 date: ${dateStr} ${timeStr}
 tags: [voice-note]
-audio: "[[Attachments/${audioFileName}]]"
 ---
 
 ${resultText}
 `;
 
-    const topic = operation.includes("灵感") ? "Idea" : "Note";
-    const noteFileName = `${timestamp}-${topic}.md`;
-    const notePath = path.join(notesDir, noteFileName);
+    const noteFileName = `${timestamp}.md`;
+    const notePath = path.join(vaultPath, noteFileName);
 
     fs.writeFileSync(notePath, markdownContent, "utf-8");
     console.log(`Created Obsidian note: ${notePath}`);
