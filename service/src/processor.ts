@@ -31,7 +31,12 @@ export async function processAudioFile(filePath: string, type: AudioType): Promi
     const subFolder = type === "idea" ? config.obsidian.ideaFolder : config.obsidian.noteFolder;
     const targetDir = path.join(vaultPath, subFolder);
 
+    console.log(`[Path Debug] vaultPath: ${vaultPath}`);
+    console.log(`[Path Debug] subFolder: ${subFolder}`);
+    console.log(`[Path Debug] targetDir: ${targetDir}`);
+
     if (!fs.existsSync(targetDir)) {
+      console.log(`[Path Debug] targetDir does not exist, creating recursively: ${targetDir}`);
       fs.mkdirSync(targetDir, { recursive: true });
     }
 
@@ -54,8 +59,10 @@ ${resultText}
     const noteFileName = `${timestamp}-${topic}.md`;
     const notePath = path.join(targetDir, noteFileName);
 
+    console.log(`[Path Debug] notePath: ${notePath}`);
+
     fs.writeFileSync(notePath, markdownContent, "utf-8");
-    console.log(`Created Obsidian note: ${notePath}`);
+    console.log(`Created Obsidian note successfully at: ${notePath}`);
 
   } catch (error: any) {
     console.error(`Processing failed for ${filePath}:`, error);
