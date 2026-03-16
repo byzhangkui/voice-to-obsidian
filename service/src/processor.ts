@@ -27,9 +27,12 @@ export async function processAudioFile(filePath: string, type: AudioType): Promi
 
     const resultText = await executeGeminiAudioTask(absolutePath, prompt);
 
-    // Save to Obsidian Vault directly
-    if (!fs.existsSync(vaultPath)) {
-      fs.mkdirSync(vaultPath, { recursive: true });
+    // Determine target directory based on type
+    const subFolder = type === "idea" ? config.obsidian.ideaFolder : config.obsidian.noteFolder;
+    const targetDir = path.join(vaultPath, subFolder);
+
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
     }
 
     const now = new Date();
@@ -49,7 +52,7 @@ ${resultText}
 
     const topic = type === "idea" ? "Idea" : "Note";
     const noteFileName = `${timestamp}-${topic}.md`;
-    const notePath = path.join(vaultPath, noteFileName);
+    const notePath = path.join(targetDir, noteFileName);
 
     fs.writeFileSync(notePath, markdownContent, "utf-8");
     console.log(`Created Obsidian note: ${notePath}`);
