@@ -35,12 +35,17 @@ export async function executeGeminiAudioTask(absolutePath: string, prompt: strin
       model: "gemini-2.5-flash",
       contents: [
         {
-          fileData: {
-            fileUri: uploadResult.uri,
-            mimeType: uploadResult.mimeType || "audio/mp4",
-          }
-        },
-        prompt
+          role: "user",
+          parts: [
+            {
+              fileData: {
+                fileUri: uploadResult.uri,
+                mimeType: uploadResult.mimeType || "audio/mp4",
+              }
+            },
+            { text: prompt }
+          ]
+        }
       ],
     });
 
