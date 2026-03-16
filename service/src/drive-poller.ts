@@ -109,10 +109,13 @@ async function transcribeAudio(filePath: string): Promise<string> {
  */
 async function processNote(transcript: string): Promise<void> {
   const config = getConfig();
-  const vaultPath = config.obsidian.vaultPath;
+  const noteFolder = config.obsidian.noteFolder;
+  const targetDir = path.isAbsolute(noteFolder)
+    ? noteFolder
+    : path.join(config.obsidian.vaultPath, noteFolder);
 
-  if (!fs.existsSync(vaultPath)) {
-    fs.mkdirSync(vaultPath, { recursive: true });
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
   }
 
   const now = new Date();
@@ -130,7 +133,7 @@ ${transcript}
 `;
 
   const noteFileName = `${timestamp}-Note.md`;
-  const notePath = path.join(vaultPath, noteFileName);
+  const notePath = path.join(targetDir, noteFileName);
 
   fs.writeFileSync(notePath, markdownContent, "utf-8");
   console.log(`Created Obsidian note: ${notePath}`);
@@ -144,10 +147,13 @@ ${transcript}
  */
 async function processIdea(transcript: string): Promise<void> {
   const config = getConfig();
-  const vaultPath = config.obsidian.vaultPath;
+  const ideaFolder = config.obsidian.ideaFolder;
+  const targetDir = path.isAbsolute(ideaFolder)
+    ? ideaFolder
+    : path.join(config.obsidian.vaultPath, ideaFolder);
 
-  if (!fs.existsSync(vaultPath)) {
-    fs.mkdirSync(vaultPath, { recursive: true });
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
   }
 
   const now = new Date();
@@ -165,7 +171,7 @@ ${transcript}
 `;
 
   const noteFileName = `${timestamp}-Idea.md`;
-  const notePath = path.join(vaultPath, noteFileName);
+  const notePath = path.join(targetDir, noteFileName);
 
   fs.writeFileSync(notePath, markdownContent, "utf-8");
   console.log(`Created Obsidian idea note: ${notePath}`);
@@ -218,4 +224,3 @@ export async function pollOnce(): Promise<void> {
     }
   }
 }
-
