@@ -4,11 +4,10 @@ import { getValidToken, refreshAccessToken } from "./auth";
 const DRIVE_UPLOAD_API = "https://www.googleapis.com/upload/drive/v3/files";
 const DRIVE_FILES_API = "https://www.googleapis.com/drive/v3/files";
 
-const PENDING_FOLDER_ID = process.env.EXPO_PUBLIC_PENDING_FOLDER_ID as string;
-
 async function createDriveFile(
   authToken: string,
-  fileName: string
+  fileName: string,
+  folderId: string
 ): Promise<string> {
   const response = await fetch(DRIVE_FILES_API, {
     method: "POST",
@@ -18,7 +17,7 @@ async function createDriveFile(
     },
     body: JSON.stringify({
       name: fileName,
-      parents: [PENDING_FOLDER_ID],
+      parents: [folderId],
     }),
   });
 
@@ -70,14 +69,15 @@ async function uploadDriveFileContent(
 }
 
 /**
- * Upload a file to Google Drive pending/ folder
+ * Upload a file to Google Drive folder
  */
 export async function uploadToDrive(
   fileUri: string,
-  fileName: string
+  fileName: string,
+  folderId: string
 ): Promise<boolean> {
-  if (!PENDING_FOLDER_ID) {
-    throw new Error("Missing EXPO_PUBLIC_PENDING_FOLDER_ID");
+  if (!folderId) {
+    throw new Error("Missing target Google Drive folder ID");
   }
 
   let token = await getValidToken();
@@ -86,7 +86,7 @@ export async function uploadToDrive(
   let fileId: string | null = null;
 
   try {
-    fileId = await createDriveFile(token, fileName);
+    fileId = await createDriveFile(token, fileName, folderId);
     await uploadDriveFileContent(token, fileUri, fileId);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -99,7 +99,7 @@ export async function uploadToDrive(
         await deleteDriveFile(token, fileId);
       }
 
-      fileId = await createDriveFile(token, fileName);
+      fileId = await createDriveFile(token, fileName, folderId);
       await uploadDriveFileContent(token, fileUri, fileId);
     } else {
       if (fileId) {

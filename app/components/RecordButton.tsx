@@ -15,7 +15,13 @@ type Status = "idle" | "recording" | "uploading" | "done" | "error";
 
 const RESET_STATUS_DELAY_MS = 2000;
 
-export default function RecordButton() {
+interface RecordButtonProps {
+  folderId: string;
+  buttonText: string;
+  buttonColor?: string;
+}
+
+export default function RecordButton({ folderId, buttonText, buttonColor = "#4A90D9" }: RecordButtonProps) {
   const [status, setStatus] = useState<Status>("idle");
   const [duration, setDuration] = useState(0);
   const [statusDetail, setStatusDetail] = useState("准备录音");
@@ -97,12 +103,12 @@ export default function RecordButton() {
       setStatusDetail(`录音完成，准备上传 ${fileName}`);
 
       try {
-        await uploadToDrive(uri, fileName);
+        await uploadToDrive(uri, fileName, folderId);
         setStatus("done");
         setStatusDetail(`上传成功：${fileName}`);
       } catch (uploadError) {
         // Upload failed, add to offline queue
-        await enqueue(uri, fileName);
+        await enqueue(uri, fileName, folderId);
         setStatus("done");
         const message = formatError(uploadError);
         setStatusDetail(`上传失败，已加入队列：${message}`);
@@ -136,7 +142,7 @@ export default function RecordButton() {
   const getStatusText = () => {
     switch (status) {
       case "idle":
-        return "按住说话";
+        return `按住说话 (${buttonText})`;
       case "recording":
         return formatDuration(duration);
       case "uploading":
@@ -148,10 +154,10 @@ export default function RecordButton() {
     }
   };
 
-  const getButtonColor = () => {
+  const getActiveColor = () => {
     switch (status) {
       case "idle":
-        return "#4A90D9";
+        return buttonColor;
       case "recording":
         return "#E53E3E";
       case "uploading":
@@ -170,7 +176,7 @@ export default function RecordButton() {
           onPressIn={startRecording}
           onPressOut={stopRecording}
           disabled={status === "uploading"}
-          style={[styles.button, { backgroundColor: getButtonColor() }]}
+          style={[styles.button, { backgroundColor: getActiveColor() }]}
         >
           <Text style={styles.icon}>
             {status === "recording" ? "⏺" : "🎙"}
@@ -179,7 +185,7 @@ export default function RecordButton() {
       </Animated.View>
       <Text style={styles.statusText}>{getStatusText()}</Text>
       <View style={styles.detailCard}>
-        <Text style={styles.detailTitle}>上传状态</Text>
+        <Text style={styles.detailTitle}>{buttonText} 上传状态</Text>
         <Text style={styles.detailText}>{statusDetail}</Text>
       </View>
     </View>
