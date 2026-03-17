@@ -27,6 +27,8 @@ export function getConfig() {
     },
     obsidian: {
       vaultPath: requireEnv("OBSIDIAN_VAULT_PATH"),
+      noteFolder: process.env.OBSIDIAN_NOTE_FOLDER || "",
+      ideaFolder: process.env.OBSIDIAN_IDEA_FOLDER || "",
     },
     downloadDir: process.env.DOWNLOAD_DIR || path.resolve(__dirname, "../downloads"),
     pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || "30000", 10),
