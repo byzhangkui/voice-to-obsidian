@@ -3,17 +3,6 @@ import { getConfig, envPath } from "./config";
 import { pollOnce } from "./drive-poller";
 import { ensureAuthenticated } from "./auth-helper";
 
-const config = getConfig();
-
-// Ensure download directory exists
-if (!fs.existsSync(config.downloadDir)) {
-  fs.mkdirSync(config.downloadDir, { recursive: true });
-}
-
-console.log("Voice-to-Obsidian service started");
-console.log(`Poll interval: ${config.pollIntervalMs}ms`);
-console.log(`Download dir: ${config.downloadDir}`);
-
 async function run() {
   // Try to load initial config to get client credentials
   // This will throw if GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET are missing
