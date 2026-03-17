@@ -211,11 +211,9 @@ export async function pollOnce(): Promise<void> {
       // 5. Cleanup local file
       fs.unlinkSync(localPath);
       console.log(`Cleaned up local file: ${localPath}`);
-
       console.log(`Successfully finished processing: ${file.name} (Type: ${file.sourceType})`);
     } catch (err) {
       console.error(`Error processing ${file.name}:`, err);
     }
   }
 }
-

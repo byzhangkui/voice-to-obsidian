@@ -32,4 +32,3 @@ export function getConfig() {
     pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || "30000", 10),
   };
 }
-
