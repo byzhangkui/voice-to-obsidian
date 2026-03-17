@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- 服务唯一标识符 -->
+    <key>Label</key>
+    <string>com.voicetoobsidian.service</string>
+
+    <!-- 工作目录 -->
+    <key>WorkingDirectory</key>
+    <string>/Users/zhangkui/Code/voice-to-obsidian/service</string>
+
+    <!-- 执行的命令 -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/zhangkui/Code/voice-to-obsidian/service/start.sh</string>
+    </array>
+
+    <!-- 进程异常退出时自动重启 -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- 记录标准输出和错误日志的路径，方便你排查问题 -->
+    <key>StandardOutPath</key>
+    <string>/Users/zhangkui/Code/voice-to-obsidian/service/service.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/zhangkui/Code/voice-to-obsidian/service/service.error.log</string>
+
+    <!-- 在用户登录后立刻启动 -->
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
