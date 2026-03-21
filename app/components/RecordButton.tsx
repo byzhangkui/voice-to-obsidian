@@ -179,8 +179,8 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
     <View style={styles.container}>
       <Animated.View style={{ transform: [{ scale }] }}>
         <Pressable
-          onPress={status === "recording" ? stopRecording : startRecording}
-          disabled={status === "uploading"}
+          onPress={status === "recording" ? stopRecording : status === "idle" ? startRecording : undefined}
+          disabled={status === "uploading" || status === "done" || status === "error"}
           style={[styles.button, { backgroundColor: getActiveColor() }]}
         >
           <Text style={styles.icon}>
