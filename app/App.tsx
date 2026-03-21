@@ -37,13 +37,22 @@ export default function App() {
   };
 
   useEffect(() => {
-    isSignedIn().then(async (signed) => {
-      setLoggedIn(signed);
-      if (signed) {
-        await initFolders();
+    const initialize = async () => {
+      try {
+        const signed = await isSignedIn();
+        setLoggedIn(signed);
+        if (signed) {
+          await initFolders();
+        }
+      } catch (error) {
+        console.error("App initialization failed:", error);
+        setInitError(error instanceof Error ? error.message : String(error));
+        setLoggedIn(false);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
+    initialize();
   }, []);
 
   const handleSignIn = async () => {

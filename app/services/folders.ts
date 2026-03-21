@@ -22,7 +22,7 @@ async function findOrCreateFolder(
   parentId?: string
 ): Promise<string> {
   // Search for existing folder
-  let q = `name='${name}' and mimeType='${FOLDER_MIME}' and trashed=false`;
+  let q = `name='${name.replace(/'/g, "\\'")}' and mimeType='${FOLDER_MIME}' and trashed=false`;
   if (parentId) {
     q += ` and '${parentId}' in parents`;
   }
