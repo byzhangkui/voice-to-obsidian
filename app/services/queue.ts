@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { uploadToDrive } from "./drive";
+import { getFolderIds } from "./folders";
 
 const QUEUE_KEY = "upload_queue";
 
@@ -42,9 +43,7 @@ export async function processQueue(): Promise<{
 
   for (const item of queue) {
     try {
-      // For old items without folderId, we use a fallback if possible, but they will likely fail or we can inject env here.
-      // Better to gracefully handle old items:
-      const targetFolder = item.folderId || process.env.EXPO_PUBLIC_PENDING_FOLDER_ID;
+      const targetFolder = item.folderId || (await getFolderIds())?.pending;
       if (!targetFolder) throw new Error("No folderId available for queued item");
       
       await uploadToDrive(item.fileUri, item.fileName, targetFolder);

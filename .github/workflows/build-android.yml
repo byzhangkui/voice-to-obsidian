@@ -31,6 +31,9 @@ jobs:
         run: npm ci
 
       - name: Generate native project
+        env:
+          EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+          EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID }}
         run: npx expo prebuild --platform android --no-install
 
       - name: Build APK
