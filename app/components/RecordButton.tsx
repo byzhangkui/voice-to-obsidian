@@ -24,7 +24,7 @@ interface RecordButtonProps {
 export default function RecordButton({ folderId, buttonText, buttonColor = "#4A90D9" }: RecordButtonProps) {
   const [status, setStatus] = useState<Status>("idle");
   const [duration, setDuration] = useState(0);
-  const [statusDetail, setStatusDetail] = useState("准备录音");
+  const [statusDetail, setStatusDetail] = useState("");
   const recordingRef = useRef<Audio.Recording | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scale = useRef(new Animated.Value(1)).current;
@@ -63,13 +63,13 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
 
       // Animate button scale
       Animated.spring(scale, {
-        toValue: 1.3,
+        toValue: 1.15,
         useNativeDriver: true,
       }).start();
     } catch (err) {
       console.error("Failed to start recording:", err);
       setStatus("error");
-      setStatusDetail(`开始录音失败：${formatError(err)}`);
+      setStatusDetail(`录音失败：${formatError(err)}`);
     }
   };
 
@@ -93,14 +93,14 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
 
       if (!uri) {
         setStatus("error");
-        setStatusDetail("录音文件为空，未拿到本地 URI");
+        setStatusDetail("录音文件为空");
         return;
       }
 
       const now = new Date();
       const fileName = `voice-${now.toISOString().replace(/[:.]/g, "-")}.m4a`;
       setStatus("uploading");
-      setStatusDetail(`录音完成，准备上传 ${fileName}`);
+      setStatusDetail("上传中...");
 
       try {
         await uploadToDrive(uri, fileName, folderId);
@@ -111,7 +111,7 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
         await enqueue(uri, fileName, folderId);
         setStatus("done");
         const message = formatError(uploadError);
-        setStatusDetail(`上传失败，已加入队列：${message}`);
+        setStatusDetail(`已加入队列：${message}`);
         Alert.alert("上传失败，已加入队列", message);
       }
 
@@ -119,17 +119,23 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
       const queueResult = await processQueue();
       if (queueResult.succeeded > 0 || queueResult.failed > 0) {
         setStatusDetail((current) =>
-          `${current}\n队列处理结果：成功 ${queueResult.succeeded}，失败 ${queueResult.failed}`
+          `${current}\n队列：成功 ${queueResult.succeeded}，失败 ${queueResult.failed}`
         );
       }
 
       // Reset after 2 seconds
-      setTimeout(() => setStatus("idle"), RESET_STATUS_DELAY_MS);
+      setTimeout(() => {
+        setStatus("idle");
+        setStatusDetail("");
+      }, RESET_STATUS_DELAY_MS);
     } catch (err) {
       console.error("Failed to stop recording:", err);
       setStatus("error");
       setStatusDetail(`结束录音失败：${formatError(err)}`);
-      setTimeout(() => setStatus("idle"), RESET_STATUS_DELAY_MS);
+      setTimeout(() => {
+        setStatus("idle");
+        setStatusDetail("");
+      }, RESET_STATUS_DELAY_MS);
     }
   };
 
@@ -137,21 +143,6 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${String(s).padStart(2, "0")}`;
-  };
-
-  const getStatusText = () => {
-    switch (status) {
-      case "idle":
-        return `点击录音 (${buttonText})`;
-      case "recording":
-        return formatDuration(duration);
-      case "uploading":
-        return "上传中...";
-      case "done":
-        return "完成 ✓";
-      case "error":
-        return "失败";
-    }
   };
 
   const getActiveColor = () => {
@@ -169,6 +160,21 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
     }
   };
 
+  const getStatusLabel = () => {
+    switch (status) {
+      case "recording":
+        return formatDuration(duration);
+      case "uploading":
+        return "上传中...";
+      case "done":
+        return "完成 ✓";
+      case "error":
+        return "失败";
+      default:
+        return buttonText;
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Animated.View style={{ transform: [{ scale }] }}>
@@ -182,11 +188,10 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
           </Text>
         </Pressable>
       </Animated.View>
-      <Text style={styles.statusText}>{getStatusText()}</Text>
-      <View style={styles.detailCard}>
-        <Text style={styles.detailTitle}>{buttonText} 上传状态</Text>
-        <Text style={styles.detailText}>{statusDetail}</Text>
-      </View>
+      <Text style={styles.label}>{getStatusLabel()}</Text>
+      {statusDetail ? (
+        <Text style={styles.detail} numberOfLines={2}>{statusDetail}</Text>
+      ) : null}
     </View>
   );
 }
@@ -194,47 +199,33 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    justifyContent: "center",
+    width: 160,
   },
   button: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
   },
   icon: {
-    fontSize: 48,
+    fontSize: 36,
   },
-  statusText: {
-    marginTop: 24,
-    fontSize: 18,
-    color: "#666",
-    fontWeight: "500",
+  label: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#333",
+    fontWeight: "600",
   },
-  detailCard: {
-    marginTop: 20,
-    width: 280,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  detailTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#1F2937",
-    marginBottom: 8,
-  },
-  detailText: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: "#4B5563",
+  detail: {
+    marginTop: 6,
+    fontSize: 12,
+    color: "#888",
+    textAlign: "center",
   },
 });

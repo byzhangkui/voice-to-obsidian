@@ -56,20 +56,16 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Voice to Obsidian</Text>
       <View style={styles.recordArea}>
-        <View style={styles.buttonWrapper}>
-          <RecordButton 
-            folderId={process.env.EXPO_PUBLIC_PENDING_FOLDER_ID || ""}
-            buttonText="普通笔记"
-            buttonColor="#4A90D9"
-          />
-        </View>
-        <View style={styles.buttonWrapper}>
-          <RecordButton 
-            folderId={process.env.EXPO_PUBLIC_IDEA_PENDING_FOLDER_ID || ""}
-            buttonText="灵感"
-            buttonColor="#9B51E0"
-          />
-        </View>
+        <RecordButton
+          folderId={process.env.EXPO_PUBLIC_PENDING_FOLDER_ID || ""}
+          buttonText="普通笔记"
+          buttonColor="#4A90D9"
+        />
+        <RecordButton
+          folderId={process.env.EXPO_PUBLIC_IDEA_PENDING_FOLDER_ID || ""}
+          buttonText="灵感"
+          buttonColor="#9B51E0"
+        />
       </View>
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
         <Text style={styles.signOutText}>退出登录</Text>
@@ -104,12 +100,11 @@ const styles = StyleSheet.create({
   },
   recordArea: {
     flex: 1,
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    gap: 32,
     width: "100%",
-  },
-  buttonWrapper: {
-    marginVertical: 20,
   },
   signInButton: {
     backgroundColor: "#4285F4",
