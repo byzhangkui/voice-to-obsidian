@@ -32,7 +32,16 @@ export default function App() {
       const ids = await ensureFolders();
       setFolderIds(ids);
     } catch (err) {
-      setInitError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      // Auth failure → force re-login
+      if (msg.includes("Token") || msg.includes("未登录") || msg.includes("401")) {
+        await signOut();
+        await clearFolderIds();
+        setFolderIds(null);
+        setLoggedIn(false);
+        return;
+      }
+      setInitError(msg);
     }
   };
 
