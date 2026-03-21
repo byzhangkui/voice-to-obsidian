@@ -54,7 +54,7 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
       recordingRef.current = recording;
       setStatus("recording");
       setDuration(0);
-      setStatusDetail("正在录音，松开后开始上传");
+      setStatusDetail("正在录音，再次点击停止");
 
       // Start timer
       timerRef.current = setInterval(() => {
@@ -142,7 +142,7 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
   const getStatusText = () => {
     switch (status) {
       case "idle":
-        return `按住说话 (${buttonText})`;
+        return `点击录音 (${buttonText})`;
       case "recording":
         return formatDuration(duration);
       case "uploading":
@@ -173,8 +173,7 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
     <View style={styles.container}>
       <Animated.View style={{ transform: [{ scale }] }}>
         <Pressable
-          onPressIn={startRecording}
-          onPressOut={stopRecording}
+          onPress={status === "recording" ? stopRecording : startRecording}
           disabled={status === "uploading"}
           style={[styles.button, { backgroundColor: getActiveColor() }]}
         >
