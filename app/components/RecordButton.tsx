@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -14,6 +14,7 @@ import { enqueue, processQueue } from "../services/queue";
 type Status = "idle" | "recording" | "uploading" | "done" | "error";
 
 const RESET_STATUS_DELAY_MS = 2000;
+const METERING_MIN_DB = -60;
 
 interface RecordButtonProps {
   folderId: string;
@@ -28,11 +29,23 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
   const recordingRef = useRef<Audio.Recording | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scale = useRef(new Animated.Value(1)).current;
+  const meterAnim = useRef(new Animated.Value(0)).current;
 
   const formatError = (error: unknown) => {
     if (error instanceof Error) return error.message;
     return typeof error === "string" ? error : JSON.stringify(error);
   };
+
+  const onRecordingStatus = useCallback((s: Audio.RecordingStatus) => {
+    if (!s.isRecording || s.metering == null) return;
+    // Normalize dB (typically -160~0) to 0~1
+    const level = Math.max(0, Math.min(1, (s.metering - METERING_MIN_DB) / -METERING_MIN_DB));
+    Animated.timing(meterAnim, {
+      toValue: level,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  }, [meterAnim]);
 
   const startRecording = async () => {
     try {
@@ -48,8 +61,14 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
       });
 
       const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
+        {
+          ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+          isMeteringEnabled: true,
+        }
       );
+
+      recording.setOnRecordingStatusUpdate(onRecordingStatus);
+      recording.setProgressUpdateInterval(150);
 
       recordingRef.current = recording;
       setStatus("recording");
@@ -81,6 +100,7 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    meterAnim.setValue(0);
     Animated.spring(scale, {
       toValue: 1,
       useNativeDriver: true,
@@ -175,19 +195,43 @@ export default function RecordButton({ folderId, buttonText, buttonColor = "#4A9
     }
   };
 
+  const ringScale = meterAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.6],
+  });
+
+  const ringOpacity = meterAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.15, 0.5],
+  });
+
   return (
     <View style={styles.container}>
-      <Animated.View style={{ transform: [{ scale }] }}>
-        <Pressable
-          onPress={status === "recording" ? stopRecording : status === "idle" ? startRecording : undefined}
-          disabled={status === "uploading" || status === "done" || status === "error"}
-          style={[styles.button, { backgroundColor: getActiveColor() }]}
-        >
-          <Text style={styles.icon}>
-            {status === "recording" ? "⏺" : "🎙"}
-          </Text>
-        </Pressable>
-      </Animated.View>
+      <View style={styles.buttonWrapper}>
+        {status === "recording" && (
+          <Animated.View
+            style={[
+              styles.meterRing,
+              {
+                backgroundColor: "#E53E3E",
+                transform: [{ scale: ringScale }],
+                opacity: ringOpacity,
+              },
+            ]}
+          />
+        )}
+        <Animated.View style={{ transform: [{ scale }] }}>
+          <Pressable
+            onPress={status === "recording" ? stopRecording : status === "idle" ? startRecording : undefined}
+            disabled={status === "uploading" || status === "done" || status === "error"}
+            style={[styles.button, { backgroundColor: getActiveColor() }]}
+          >
+            <Text style={styles.icon}>
+              {status === "recording" ? "⏺" : "🎙"}
+            </Text>
+          </Pressable>
+        </Animated.View>
+      </View>
       <Text style={styles.label}>{getStatusLabel()}</Text>
       {statusDetail ? (
         <Text style={styles.detail} numberOfLines={2}>{statusDetail}</Text>
@@ -200,6 +244,18 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     width: 160,
+  },
+  buttonWrapper: {
+    width: 160,
+    height: 160,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  meterRing: {
+    position: "absolute",
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   button: {
     width: 100,
@@ -217,7 +273,7 @@ const styles = StyleSheet.create({
     fontSize: 36,
   },
   label: {
-    marginTop: 12,
+    marginTop: 4,
     fontSize: 16,
     color: "#333",
     fontWeight: "600",
